@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.project.reportBoard">
+
+	<sql id="search">
+		<choose>
+        	<when test="searchOption == 'titleAndContent'">
+        		WHERE (REPORT_BOARD_TITLE LIKE '%' || #{keyword} || '%'
+        		OR    REPORT_BOARD_CONTENTS LIKE '%' || #{keyword} || '%')
+        	</when>
+        	
+        	<otherwise>
+        		WHERE (${searchOption} LIKE '%' || #{keyword} || '%')
+        	</otherwise>
+        </choose>
+	</sql>
+	
+	<sql id="sort">
+		<choose>
+        	<when test="sortOption == 'report_board_whole'">
+        		AND (REPORT_BOARD_ANSWER_STATUS LIKE '%')
+        	</when>
+        	<when test="sortOption == 'report_board_accept'">
+        		AND (REPORT_BOARD_ANSWER_STATUS LIKE '%' || '접수중' || '%')
+        	</when>
+        	<when test="sortOption == 'report_board_reject'">
+        		AND (REPORT_BOARD_ANSWER_STATUS LIKE '%' || '처리기각' || '%')
+        	</when>
+        	<when test="sortOption == 'report_board_processing_complete'">
+        		AND (REPORT_BOARD_ANSWER_STATUS LIKE '%' || '처리완료' || '%')
+        	</when>
+        </choose>
+	</sql>
+	
+	<sql id="chkMno">
+      <choose>
+         <when test="mno > 0">
+            and report_board_mno = #{mno}
+         </when>
+      </choose>
+   </sql>
+	
+	<resultMap type="com.project.reportBoard.model.ReportBoardDto" 
+		id="reportBoardResultMap">
+		
+		<id column="REPORT_BOARD_NO" property="report_board_no"/>
+		<result column="REPORT_BOARD_MNO" property="report_board_mno"/>
+		<result column="REPORT_BOARD_REASON" property="report_board_reason"/>
+		<result column="REPORT_BOARD_TITLE" property="report_board_title"/>
+		<result column="REPORT_BOARD_NAME" property="report_board_name"/>
+		<result column="REPORT_BOARD_CONTENTS" property="report_board_contents"/>
+		<result column="REPORT_BOARD_CRE_DATE" property="report_board_cre_date"
+			javaType="java.util.Date"/>
+		<result column="REPORT_BOARD_MOD_DATE" property="report_board_mod_date"
+			javaType="java.util.Date"/>
+		<result column="REPORT_BOARD_ANSWER_DATE" property="report_board_answer_date"
+			javaType="java.util.Date"/>
+		<result column="REPORT_BOARD_ANSWER_STATUS" property="report_board_answer_status"/>
+		
+		<result column="PROJECT_BOARD_NO" property="project_board_no"/>
+		<result column="PROJECT_BOARD_MNO" property="project_board_mno"/>
+		<result column="PROJECT_BOARD_TITLE" property="project_board_title"/>
+		<result column="PROJECT_BOARD_VIEWS" property="project_board_views"/>
+		<result column="PROJECT_BOARD_CRE_DATE" property="project_board_cre_date"
+			javaType="java.util.Date"/>
+		<result column="PROJECT_BOARD_MOD_DATE" property="project_board_mod_date"
+			javaType="java.util.Date"/>
+		<result column="PROJECT_BOARD_DEL_FLAG" property="project_board_del_flag"/>
+		<result column="PROJECT_BOARD_CATEGORY" property="project_board_category"/>
+		<result column="PROJECT_BOARD_CONTENTS" property="project_board_contents"/>
+		
+		<result column="MEMBER_NO" property="member_no"/>
+		<result column="MEMBER_NAME" property="member_name"/>
+		<result column="MEMBER_NICK" property="member_nick"/>
+		<result column="MEMBER_EMAIL" property="member_email"/>
+		<result column="MEMBER_PWD" property="member_pwd"/>
+		<result column="MEMBER_PHONE" property="member_phone"/>
+		<result column="MEMBER_CHECK_QUESTION" property="member_check_question"/>
+		<result column="MEMBER_CHECK_ANSWER" property="member_check_answer"/>
+		<result column="MEMBER_COMMENTS" property="member_comments"/>
+		<result column="MEMBER_CRE_DATE" property="member_cre_date"/>
+		<result column="MEMBER_MOD_DATE" property="member_mod_date"/>
+		<result column="MEMBER_SIGN_CHECK" property="member_sign_check"/>
+		<result column="MEMBER_GRADE" property="member_grade"/>
+		<result column="MEMBER_DEL_FLAG" property="member_del_flag"/>
+		
+	</resultMap>
+
+
+	<select id="reportBoardSelectList" parameterType="map" 
+		resultMap="reportBoardResultMap">
+		SELECT RBMS.RNUM, RBMS.REPORT_BOARD_NO, RBMS.REPORT_BOARD_TITLE, RBMS.MEMBER_NICK, RBMS.REPORT_BOARD_REASON,
+       		   RBMS.REPORT_BOARD_CRE_DATE, RBMS.REPORT_BOARD_ANSWER_DATE, RBMS.REPORT_BOARD_ANSWER_STATUS
+		FROM(SELECT ROWNUM RNUM, RBM.REPORT_BOARD_NO, RBM.REPORT_BOARD_TITLE, RBM.MEMBER_NICK, RBM.REPORT_BOARD_REASON,
+                    RBM.REPORT_BOARD_CRE_DATE, RBM.REPORT_BOARD_ANSWER_DATE, RBM.REPORT_BOARD_ANSWER_STATUS 
+     		 FROM(SELECT RB.REPORT_BOARD_NO, RB.REPORT_BOARD_TITLE, M.MEMBER_NICK, RB.REPORT_BOARD_CRE_DATE,
+			   			 RB.REPORT_BOARD_ANSWER_DATE, RB.REPORT_BOARD_ANSWER_STATUS, RB.REPORT_BOARD_REASON 
+          		  FROM REPORT_BOARD RB LEFT OUTER JOIN MEMBER M
+          		  ON RB.REPORT_BOARD_MNO = M.MEMBER_NO
+          		  
+          		  <include refid="search"></include>
+          		  <include refid="sort"></include>
+          		  <include refid="chkMno"></include>
+          		  
+          		  ORDER BY RB.REPORT_BOARD_NO DESC) RBM 
+     		 )RBMS     
+		WHERE RBMS.RNUM BETWEEN #{start} AND #{end}
+	</select>
+	
+	<select id="reportBoardSelectDetail" parameterType="int"
+		resultMap="reportBoardResultMap">
+		SELECT RB.REPORT_BOARD_NAME, RB.REPORT_BOARD_NO, RB.REPORT_BOARD_MNO, M.MEMBER_NICK, RB.REPORT_BOARD_TITLE, RB.REPORT_BOARD_CONTENTS, 
+			   RB.REPORT_BOARD_CRE_DATE, RB.REPORT_BOARD_ANSWER_DATE, RB.REPORT_BOARD_ANSWER_STATUS, RB.REPORT_BOARD_REASON  
+		FROM REPORT_BOARD RB, MEMBER M
+		WHERE RB.REPORT_BOARD_MNO = M.MEMBER_NO
+		AND RB.REPORT_BOARD_NO = #{report_board_no}	
+	</select>
+	
+	<insert id="reportBoardInsertOne" parameterType="com.project.reportBoard.model.ReportBoardDto"
+		useGeneratedKeys="true" keyProperty="report_board_no">
+		<selectKey keyProperty="report_board_no" resultType="int" order="BEFORE">
+			SELECT MEMBER_MNO_SEQ.NEXTVAL FROM DUAL
+		</selectKey>
+		INSERT INTO REPORT_BOARD
+		VALUE(REPORT_BOARD_NO, REPORT_BOARD_MNO, REPORT_BOARD_TITLE, REPORT_BOARD_REASON,
+			  REPORT_BOARD_CONTENTS, REPORT_BOARD_CRE_DATE, REPORT_BOARD_NAME)
+		VALUES(#{report_board_no}, #{report_board_mno}, #{report_board_title},
+				#{report_board_reason}, #{report_board_contents}, SYSDATE, #{report_board_name})
+	</insert>
+	
+	<select id="reportBoardSelectTotalCount" resultType="int" 
+		parameterType="map">
+		SELECT COUNT(*)
+		FROM REPORT_BOARD RB LEFT OUTER JOIN MEMBER M
+		ON RB.REPORT_BOARD_MNO = M.MEMBER_NO
+		<include refid="search"></include>
+		<include refid="sort"></include>
+		<include refid="chkMno"></include>		
+	</select>
+
+	<select id="reportSelectCurPage" parameterType="map"
+		resultType="int">
+		SELECT FLOOR((RNUM-1) / 10) + 1 NO
+		FROM(SELECT ROWNUM RNUM, RBA.REPORT_BOARD_NO, RBA.REPORT_BOARD_TITLE, RBA.MEMBER_NICK,
+                    RBA.REPORT_BOARD_CRE_DATE, RBA.REPORT_BOARD_ANSWER_DATE, RBA.REPORT_BOARD_ANSWER_STATUS 
+     		 FROM(SELECT RB.REPORT_BOARD_NO, RB.REPORT_BOARD_TITLE, M.MEMBER_NICK, RB.REPORT_BOARD_CRE_DATE,
+			   			 RB.REPORT_BOARD_ANSWER_DATE, RB.REPORT_BOARD_ANSWER_STATUS 
+          		  FROM REPORT_BOARD RB LEFT OUTER JOIN MEMBER M
+          		  ON RB.REPORT_BOARD_MNO = M.MEMBER_NO
+          		  
+          		  <include refid="search"></include>
+          		  
+          		  ORDER BY RB.REPORT_BOARD_NO DESC) RBA 
+     		 )    
+		WHERE REPORT_BOARD_NO = #{report_board_no}
+		<include refid="sort"></include>
+	</select>
+	
+	<update id="processingComplete" parameterType="com.project.reportBoard.model.ReportBoardDto">
+		UPDATE 
+		(
+		    SELECT RB.REPORT_BOARD_ANSWER_STATUS, RB.REPORT_BOARD_ANSWER_DATE
+		    FROM PROJECT_BOARD PB, REPORT_BOARD RB
+		    WHERE PB.PROJECT_BOARD_DEL_FLAG = 'Y'
+		    AND PB.PROJECT_BOARD_TITLE = RB.REPORT_BOARD_TITLE
+		)
+		SET
+		REPORT_BOARD_ANSWER_STATUS = '처리완료',
+		REPORT_BOARD_ANSWER_DATE = SYSDATE
+	</update>
+	
+	<select id="selectProjectBoardNumber" parameterType="String"
+		 resultType="int">
+		SELECT PROJECT_BOARD_NO
+		FROM PROJECT_BOARD
+		WHERE PROJECT_BOARD_TITLE = #{title}
+	</select>
+	
+	<delete id="reportBoardDeleteOne" parameterType="java.lang.Integer" >
+		DELETE FROM REPORT_BOARD
+		WHERE REPORT_BOARD_NO = #{report_board_no}
+	</delete>
+
+</mapper>

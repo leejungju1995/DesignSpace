@@ -1,0 +1,403 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.project.freeBoard">
+
+	<resultMap type="com.project.freeBoard.model.FreeBoardDto" 
+		id="freeBoardResultMap">
+		<result column="free_board_no"		property="freeBoardNo"			/>
+		<result column="free_board_mno"		property="freeBoardMno"			/>
+		<result column="free_board_title"		property="freeBoardTitle"			/>
+		<result column="free_board_contents"		property="freeBoardContents"			/>
+		<result column="free_board_views"			property="freeBoardViews"			/>
+		<result column="nl"		property="freeBoardLike"			/>
+		<result column="rnum"		property="freeBoardRownum"			/>
+		<result column="free_board_cre_date"		property="freeBoardCreDate"		javaType="java.util.Date"/>
+		<result column="free_board_mod_date"		property="freeBoardModDate"		javaType="java.util.Date"/>
+		<result column="commentCount"		property="freeBoardCommentCount"/>
+		
+		<result column="free_like_no"	property="freeLikeNo"		/>
+		<result column="free_like_mno"	property="freeLikeMno"		/>
+		<result column="free_like_fbno"	property="freeLikeFbno"		/>
+		<result column="free_like_flag"	property="freeLikeFlag"		/>
+		
+		
+		<result column="free_comment_no"         	property="freeCommentNo"			/>
+		<result column="free_comment_fbno"         	property="freeCommentFbno"			/>
+		<result column="free_comment_mno"         	property="freeCommentMno"			/>
+		<result column="free_comment_comments"         	property="freeCommentComments"			/>
+		<result column="free_comment_cre_date"         	property="freeCommentCreDate"			javaType="java.util.Date"/>	
+		<result column="free_comment_mod_date"         	property="freeCommentModDate"			javaType="java.util.Date"/>
+		
+		<result column="member_no"	property="memberNo"	/>
+		<result column="member_name"	property="memberName"	/>
+		<result column="member_nick"	property="memberNick"	/>
+		<result column="member_email"	property="memberEmail"	/>
+		<result column="member_pwd"	property="memberPwd"	/>
+		<result column="member_phone"	property="memberPhone"	/>
+		<result column="member_check_question"	property="memberCheckQuestion"			/>
+		<result column="member_check_answer"	property="memberCheckAnswer"			/>
+		<result column="member_comments"	property="memberComments"		/>
+		<result column="member_sign_check"	property="memberSignCheck"		/>
+		<result column="member_del_flag"	property="memberDelFlag"		/>
+		<result column="member_cre_date"	property="memberCreDate"		javaType="java.util.Date"/>
+		<result column="member_mod_date"	property="memberModDate"		javaType="java.util.Date"/>
+		<result column="member_grade"	property="memberGrade"			/>
+		                                                      
+		                                                      
+		<result column="PROFILE_TABLE_NO"	property="profileTableNo"					/>
+		<result column="PROFILE_TABLE_MNO"	property="profileTableMno"					/>
+		<result column="PROFILE_TABLE_ORIGINAL_NAME"		property="profileTableOriginalName"		/>
+		<result column="PROFILE_TABLE_STORED_NAME"		property="profileTableStoredName"			/>
+		
+			
+	</resultMap>
+	
+	<sql id="freeBoardSearch">
+		<choose>
+        	<!-- 검색옵션이 전체 검색일 경우  -->
+        	<when test="searchOption == 'all'">
+        		and (fb.free_board_title LIKE '%' || #{keyword} || '%'
+        		OR   fb.free_board_contents LIKE '%' || #{keyword} || '%')
+        	</when>
+        	
+        	<!-- 전체 검색이 아닐 경우 -->
+        	<otherwise>
+        		and (${searchOption} LIKE '%' || #{keyword} || '%')
+        	</otherwise>
+        </choose>
+	</sql>
+	
+	<sql id="freeBoardSort">
+		<choose>
+        	<when test="lineTitle == 'free_board_no'">
+        		free_board_no desc
+        	</when>
+        	
+        	<when test="lineTitle == 'free_board_title'">
+        		free_board_title asc
+        	</when>
+        	
+        	<when test="lineTitle == 'member_nick'">
+        		member_nick asc
+        	</when>
+        	
+        	<when test="lineTitle == 'free_board_views'">
+        		free_board_views desc
+        	</when>
+        	
+        	<when test="lineTitle == 'nl'">
+        		nl desc nulls last
+        	</when>
+        	
+        	<when test="lineTitle == 'free_board_cre_date'">
+        		free_board_cre_date desc
+        	</when>
+        </choose>
+	</sql>
+	
+	
+	<select id="freeBoardSelectTotalCount" resultType="int" 
+		parameterType="map">
+		select count(*)
+		from(
+		select ff.rnum,ff.free_board_no, ff.free_board_title, ff.member_no,ff.member_grade, ff.free_board_views, ff.member_nick, ff.free_board_cre_date, ff.free_board_contents, nvl(ff.nl,0) nl
+		from (
+		select rownum rnum,f.free_board_no, f.free_board_title, f.member_no,f.member_grade, f.free_board_views, f.member_nick, f.free_board_cre_date, f.free_board_contents,f.nl
+		from (
+		        select fb.free_board_no, fb.free_board_title, m.member_no,m.member_grade, fb.free_board_views, m.member_nick ,fb.free_board_cre_date, fb.free_board_contents, l.nl
+		        from free_board fb, member m,(select nvl(count(fl.free_like_no),0) nl, fb.free_board_no
+		                                        from free_board fb left join free_like fl
+		                                        on fb.free_board_no = fl.free_like_fbno
+                                                where fl.free_like_flag ='Y'
+                                                group by fb.free_board_no
+                                               )l
+            where fb.free_board_no = l.free_board_no(+)
+            <include refid="freeBoardSearch"></include>
+            and fb.free_board_mno = m.member_no
+            order by <include refid="freeBoardSort"></include>)f
+		                                        )ff)                                
+	</select>
+	
+	<select id="freeBoardSelectCurPage" parameterType="map"
+		resultType="int">
+		select floor((rnum-1) / 10)+1 no
+		from (
+		    select rownum rnum,f.free_board_no, f.free_board_title, f.member_no,f.member_grade, f.free_board_views, f.member_nick, f.free_board_cre_date, f.free_board_contents, nvl(f.nl,0)
+		    from (
+		            select fb.free_board_no, fb.free_board_title, m.member_no, m.member_grade, fb.free_board_views, m.member_nick ,fb.free_board_cre_date, fb.free_board_contents, l.nl
+		            from free_board fb, member m
+			            ,(select nvl(count(fl.free_like_no),0) nl, fb.free_board_no
+			              from free_board fb left join free_like fl
+			              on fb.free_board_no = fl.free_like_fbno
+                          where fl.free_like_flag = 'Y'
+			              group by fb.free_board_no)l
+                     where fb.free_board_no = l.free_board_no(+)
+                     and fb.free_board_mno = m.member_no
+                     <include refid="freeBoardSearch"></include>
+                     order by <include refid="freeBoardSort"></include>) f
+		    )ff
+		where ff.free_board_no = #{no}
+	</select>
+	
+	<select id="freeBoardSelectList" parameterType="map"
+		resultMap="freeBoardResultMap">
+		select ff.rnum,ff.free_board_no, ff.free_board_title, ff.member_no,ff.member_grade, ff.free_board_views, ff.member_nick, ff.free_board_cre_date, ff.free_board_contents, nvl(ff.nl,0) nl
+		from (
+		select rownum rnum,f.free_board_no, f.free_board_title, f.member_no,f.member_grade, f.free_board_views, f.member_nick, f.free_board_cre_date, f.free_board_contents,f.nl
+		from (
+		        select fb.free_board_no, fb.free_board_title, m.member_no,m.member_grade, fb.free_board_views, m.member_nick ,fb.free_board_cre_date, fb.free_board_contents, l.nl
+		        from free_board fb, member m,(select nvl(count(fl.free_like_no),0) nl, fb.free_board_no
+		                                        from free_board fb left join free_like fl
+		                                        on fb.free_board_no = fl.free_like_fbno
+                                                where fl.free_like_flag ='Y'
+                                                group by fb.free_board_no
+                                               )l
+            where fb.free_board_no = l.free_board_no(+)
+            <include refid="freeBoardSearch"></include>
+            and fb.free_board_mno = m.member_no
+            order by <include refid="freeBoardSort"></include>)f
+		                                        )ff                                
+		where rnum between #{start} and #{end}
+	</select>
+	
+	
+	<select id="freeBoardSelectOne" parameterType="int"
+		resultMap="freeBoardResultMap">
+		select ff.rnum,ff.free_board_no, ff.free_board_title, ff.member_no, ff.free_board_views, ff.member_nick, ff.free_board_cre_date, ff.free_board_contents, nvl(ff.nl,0) nl
+		from (
+		select rownum rnum,f.free_board_no, f.free_board_title, f.member_no, f.free_board_views, f.member_nick, f.free_board_cre_date, f.free_board_contents,f.nl
+		from (
+		        select fb.free_board_no, fb.free_board_title, m.member_no, fb.free_board_views, m.member_nick ,fb.free_board_cre_date, fb.free_board_contents, l.nl
+		        from free_board fb, member m,(select nvl(count(fl.free_like_no),0) nl, fb.free_board_no
+		                                        from free_board fb left join free_like fl
+		                                        on fb.free_board_no = fl.free_like_fbno
+                                                where fl.free_like_flag ='Y'
+                                                group by fb.free_board_no
+                                               )l
+            where fb.free_board_no = l.free_board_no(+)
+            
+            and fb.free_board_mno = m.member_no
+            order by fb.free_board_no desc)f
+		                                        )ff
+		where ff.free_board_no = #{no}
+	</select>
+	
+	<update id="freeBoardView" parameterType="int">
+      	update free_board
+		set 
+		free_board_views =  free_board_views +1
+		where free_board_no = #{no}
+   	</update>
+	
+	
+	
+	<select id="freeBoardCommentSelectTotalCount" resultType="int" 
+		parameterType="int">
+		select count(*)
+		from (select rownum rnum,fbm.free_comment_no,fbm.free_comment_comments,fbm.free_comment_cre_date, fbm.member_name, fbm.profile_table_stored_name
+		    from (
+		        select fc.free_comment_no,fc.free_comment_comments,fc.free_comment_cre_date, m.member_name, pt.profile_table_stored_name
+		        from free_board fb , free_comment fc, member m, profile_table pt
+		        where fb.free_board_no = fc.free_comment_fbno
+		        and fc.free_comment_mno = m.member_no(+)
+		        and m.member_no = pt.profile_table_mno(+)
+		        and fb.free_board_no = #{no}
+		        order by fc.free_comment_no desc)fbm
+		        )
+	</select>
+	
+	
+	<select id="freeBoardCommentSelectList" parameterType="map"
+		resultMap="freeBoardResultMap">
+		
+		SELECT *
+		FROM (SELECT ROWNUM RNUM,FBM.FREE_COMMENT_NO,FBM.FREE_COMMENT_COMMENTS,FBM.FREE_COMMENT_CRE_DATE, FBM.MEMBER_NICK, FBM.PROFILE_TABLE_STORED_NAME
+				,FBM.PROFILE_TABLE_ORIGINAL_NAME, FBM.PROFILE_TABLE_MNO, FBM.PROFILE_TABLE_NO,FBM.FREE_COMMENT_MNO,fbm.free_comment_mod_date
+		    FROM (
+		        SELECT FC.FREE_COMMENT_NO,FC.FREE_COMMENT_MNO,FC.FREE_COMMENT_COMMENTS,FC.FREE_COMMENT_CRE_DATE, M.MEMBER_NICK, PT.PROFILE_TABLE_STORED_NAME
+                    ,PT.PROFILE_TABLE_ORIGINAL_NAME, PT.PROFILE_TABLE_MNO, PT.PROFILE_TABLE_NO,fc.free_comment_mod_date
+		        FROM FREE_BOARD FB , FREE_COMMENT FC, MEMBER M, PROFILE_TABLE PT
+		        WHERE FB.FREE_BOARD_NO = FC.FREE_COMMENT_FBNO
+		        AND FC.FREE_COMMENT_MNO = M.MEMBER_NO(+)
+		        AND M.MEMBER_NO = PT.PROFILE_TABLE_MNO(+)
+		        AND FB.FREE_BOARD_NO = #{no}
+		        ORDER BY FC.FREE_COMMENT_NO DESC)FBM
+		        )
+		<![CDATA[WHERE RNUM <= #{end}]]>
+		
+		
+	</select>
+	
+	<select id="freeBoardLikeSelectList" parameterType="map"
+		resultType="String">
+          SELECT FREE_LIKE_FLAG
+			FROM FREE_LIKE
+			WHERE FREE_LIKE_FBNO= #{no}
+            AND FREE_LIKE_MNO = #{mno}  
+	</select>
+	
+	<insert id="freeBoardLikeInsert" parameterType="map">
+		insert into free_like
+			value(free_like_no,free_like_mno,free_like_fbno, free_like_flag)
+			values(free_like_flno_seq.nextval,#{mno},#{no}, 'Y')
+	</insert>
+	
+	<update id="freeBoardLikeUpdate" parameterType="map">
+		update free_like
+			set
+			free_like_flag ='Y'
+			where free_like_mno = #{mno}
+			and free_like_fbno= #{no}
+	
+	</update>
+	
+	<update id="freeBoardLikeDel" parameterType="map">
+		update free_like
+			set
+			free_like_flag ='N'
+			where free_like_mno = #{mno}
+			and free_like_fbno= #{no}
+	
+	</update>
+	
+	<insert id="freeBoardAdd" parameterType ="map">
+		INSERT INTO FREE_BOARD
+			VALUE(FREE_BOARD_NO,FREE_BOARD_MNO,FREE_BOARD_TITLE, FREE_BOARD_CONTENTS, FREE_BOARD_CRE_DATE)
+			VALUES(FREE_BOARD_FBNO_SEQ.NEXTVAL,#{mno},#{title},#{contents},SYSDATE)
+	</insert>
+	
+	<select id="freeBoardAddOne" parameterType="map"
+		resultType="String">
+			SELECT MEMBER_NICK
+			FROM  MEMBER
+			WHERE MEMBER_NO = #{mno}
+	</select>
+	
+	<delete id="freeBoardLikeDelete" parameterType="int">
+		delete from free_like
+			where free_like_fbno = #{no}
+	</delete>
+	
+	<delete id="freeBoardCommentDelete" parameterType="int">
+		delete from free_comment
+			where free_comment_fbno = #{no}
+	</delete>
+	
+	<delete id="freeBoardDelete" parameterType="int">
+		delete from free_board
+			where free_board_no = #{no}
+	</delete>
+	
+	<insert id="freeBoardCommentAdd" parameterType="map">
+		insert into free_comment
+			value(free_comment_no,free_comment_fbno,free_comment_mno,free_comment_comments, free_comment_cre_date)
+			values(free_comment_fcno_seq.nextval, #{no},#{mno},#{comments}, sysdate)
+	</insert>
+	
+	<update id="freeBoardUpdate" parameterType="map">
+		UPDATE FREE_BOARD 
+		<set>
+			<if test="title != ''">FREE_BOARD_TITLE = #{title},</if>
+			<if test="contents != ''">FREE_BOARD_CONTENTS = #{contents},</if>
+			FREE_BOARD_MOD_DATE = SYSDATE
+		</set>
+		WHERE free_board_no = #{no}
+	</update>
+	
+	<update id="freeBoardCommentUpdate" parameterType="map">
+		update free_comment
+			set
+			free_comment_comments = #{comments},
+			free_comment_mod_date = SYSDATE
+			where free_comment_no = #{fcno}
+	</update>
+	
+	<delete id="freeBoardCommentOneDelete" parameterType="int">
+		delete from free_comment
+			where free_comment_no = #{fcno}
+	</delete>
+	
+	<select id="freeBoardCommentTotalCount" parameterType="int"
+		resultType="int">
+		select nvl(count(*),0) commentCount
+			from free_comment
+			where free_comment_fbno = #{no}
+	</select>
+	
+	<select id="selectTotalMoveCount" parameterType="map"
+		resultType="int">
+		select count(*)
+		from (
+		select ff.rnum,ff.free_board_no, ff.free_board_title, ff.member_no,ff.member_grade, ff.free_board_views, ff.member_nick, ff.free_board_cre_date, ff.free_board_contents, nvl(ff.nl,0) nl
+		from (
+		select rownum rnum,f.free_board_no, f.free_board_title, f.member_no,f.member_grade, f.free_board_views, f.member_nick, f.free_board_cre_date, f.free_board_contents,f.nl
+		from (
+		        select fb.free_board_no, fb.free_board_title, m.member_no,m.member_grade, fb.free_board_views, m.member_nick ,fb.free_board_cre_date, fb.free_board_contents, l.nl
+		        from free_board fb, member m,(select nvl(count(fl.free_like_no),0) nl, fb.free_board_no
+		                                        from free_board fb left join free_like fl
+		                                        on fb.free_board_no = fl.free_like_fbno
+                                                where fl.free_like_flag ='Y'
+                                                group by fb.free_board_no
+                                               )l
+            where fb.free_board_no = l.free_board_no(+)
+            <include refid="freeBoardSearch"></include>
+            and fb.free_board_mno = m.member_no
+            order by <include refid="freeBoardSort"></include>)f
+		                                        )ff)
+		
+	</select>
+	
+	<select id="selectPrePage" parameterType="map"
+		resultMap="freeBoardResultMap">
+		select *
+		from(
+		select ff.rnum,ff.free_board_no, ff.free_board_title, ff.member_no,ff.member_grade, ff.free_board_views, ff.member_nick, ff.free_board_cre_date, ff.free_board_contents, nvl(ff.nl,0) nl
+		from (
+		select rownum rnum,f.free_board_no, f.free_board_title, f.member_no,f.member_grade, f.free_board_views, f.member_nick, f.free_board_cre_date, f.free_board_contents,f.nl
+		from (
+		        select fb.free_board_no, fb.free_board_title, m.member_no,m.member_grade, fb.free_board_views, m.member_nick ,fb.free_board_cre_date, fb.free_board_contents, l.nl
+		        from free_board fb, member m,(select nvl(count(fl.free_like_no),0) nl, fb.free_board_no
+		                                        from free_board fb left join free_like fl
+		                                        on fb.free_board_no = fl.free_like_fbno
+                                                where fl.free_like_flag ='Y'
+                                                group by fb.free_board_no
+                                               )l
+            where fb.free_board_no = l.free_board_no(+)
+            <include refid="freeBoardSearch"></include>
+            and fb.free_board_mno = m.member_no
+            order by <include refid="freeBoardSort"></include>)f
+		                                        )ff
+			where rnum = #{rnum} - 1)
+		
+		
+	</select>
+	
+	
+	<select id="selectNextPage" parameterType="map"
+		resultMap="freeBoardResultMap">
+		select *
+		from(
+		select ff.rnum,ff.free_board_no, ff.free_board_title, ff.member_no,ff.member_grade, ff.free_board_views, ff.member_nick, ff.free_board_cre_date, ff.free_board_contents, nvl(ff.nl,0) nl
+		from (
+		select rownum rnum,f.free_board_no, f.free_board_title, f.member_no,f.member_grade, f.free_board_views, f.member_nick, f.free_board_cre_date, f.free_board_contents,f.nl
+		from (
+		        select fb.free_board_no, fb.free_board_title, m.member_no,m.member_grade, fb.free_board_views, m.member_nick ,fb.free_board_cre_date, fb.free_board_contents, l.nl
+		        from free_board fb, member m,(select nvl(count(fl.free_like_no),0) nl, fb.free_board_no
+		                                        from free_board fb left join free_like fl
+		                                        on fb.free_board_no = fl.free_like_fbno
+                                                where fl.free_like_flag ='Y'
+                                                group by fb.free_board_no
+                                               )l
+            where fb.free_board_no = l.free_board_no(+)
+            <include refid="freeBoardSearch"></include>
+            and fb.free_board_mno = m.member_no
+            order by <include refid="freeBoardSort"></include>)f
+		                                        )ff
+			where rnum = #{rnum} + 1)
+		
+		
+	</select>
+	
+	
+</mapper>

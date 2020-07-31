@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.project.projectBoard">
+	
+	<sql id="categoryOption">
+		<choose>
+        	<!-- 전체 카테고리 조회일 경우  -->
+        	<when test="categoryOption == 'all'">
+        		and (project_board_category = 'p' 
+				or project_board_category = 'i') 
+        	</when>
+        	
+        	<!-- 전체 카테고리 조회가 아닐 경우 -->
+        	<when test="categoryOption == 'pic'">
+        		and project_board_category = 'p'  
+        	</when>
+        	<when test="categoryOption == 'ill'">
+        		and project_board_category = 'i'  
+        	</when>
+        </choose>
+	</sql>
+	
+	<sql id="pageOption">
+		<choose>
+			<when test="pageOption == 'my'">
+				and project_board_mno = #{memberNo}
+			</when>
+		</choose>
+	</sql>
+	
+	<sql id="pageOption2">
+		<choose>
+			<when test="pageOption == 'admin'">
+				WHERE RNUM BETWEEN #{start} AND #{end}
+			</when>
+			<otherwise>
+				<![CDATA[WHERE RNUM <= #{end}]]>
+			</otherwise>
+		</choose>
+	</sql>
+	
+	<sql id="searchOption">
+		<choose>
+			<when test="searchOption == 'all'">
+				and (project_board_title like '%' || #{keyword} || '%'
+				or project_board_contents like '%' || #{keyword} || '%')
+			</when>
+			<otherwise>
+				and (${searchOption} like '%' || #{keyword} || '%')
+			</otherwise>
+		</choose>
+	</sql>
+	
+	<resultMap type="com.project.projectBoard.model.ProjectBoardDto"
+		 id="projectBoardResultMap">
+		<result column="project_board_no" property="project_board_no"/>
+		<result column="project_board_mno" property="project_board_mno"/>
+		<result column="project_board_title" property="project_board_title"/>
+		<result column="project_board_contents" property="project_board_contents"/>
+		<result column="project_board_views" property="project_board_views"/>
+		<result column="project_board_like" property="project_board_like"/>
+		<result column="project_board_category" property="project_board_category"/>
+		<result column="project_board_cre_date" property="project_board_cre_date"
+			javaType="java.util.Date"/>
+		<result column="project_board_mod_date" property="project_board_mod_date"
+			javaType="java.util.Date"/>	
+		<result column="project_board_del_flag" property="project_board_del_flag"/>
+		<result column="member_nick" property="member_nick"/>
+		<result column="FILE_TABLE_ORIGINAL_FILE_NAME" property="FILE_TABLE_ORIGINAL_FILE_NAME"/>
+		<result column="FILE_TABLE_STORED_FILE_NAME" property="FILE_TABLE_STORED_FILE_NAME"/>
+		<result column="PROFILE_TABLE_ORIGINAL_NAME" property="PROFILE_TABLE_ORIGINAL_NAME"/>
+		<result column="PROFILE_TABLE_STORED_NAME" property="PROFILE_TABLE_STORED_NAME"/>
+		<result column="project_comment_cnt" property="project_comment_cnt"/>
+		<result column="project_comment_comments" property="project_comment_comments"/>
+		<result column="project_comment_cre_date" property="project_comment_cre_date"/>
+		<result column="project_comment_mod_date" property="project_comment_mod_date"/>
+	</resultMap>
+	
+	<resultMap type="com.project.projectBoard.model.ProjectBoardFileDto"
+		 id="projectBoardFileResultMap">
+		<result column="FILE_TABLE_NO" property="FILE_TABLE_NO"/>
+		<result column="FILE_TABLE_MNO" property="FILE_TABLE_MNO"/>
+		<result column="FILE_TABLE_PBNO" property="FILE_TABLE_PBNO"/>
+		<result column="FILE_TABLE_ORIGINAL_FILE_NAME" property="FILE_TABLE_ORIGINAL_FILE_NAME"/>
+		<result column="FILE_TABLE_STORED_FILE_NAME" property="FILE_TABLE_STORED_FILE_NAME"/>
+		<result column="FILE_TABLE_CRE_DATE" property="FILE_TABLE_CRE_DATE"
+			javaType="java.util.Date"/>
+		<result column="FILE_TABLE_mod_date" property="FILE_TABLE_mod_date"
+			javaType="java.util.Date"/>	
+	</resultMap>		
+	
+	<resultMap type="com.project.projectBoard.model.ProjectCommentDto"
+		 id="projectCommentResultMap">
+		<result column="PROJECT_COMMENT_NO" property="PROJECT_COMMENT_NO"/>
+		<result column="PROJECT_COMMENT_MNO" property="PROJECT_COMMENT_MNO"/>
+		<result column="PROJECT_COMMENT_PBNO" property="PROJECT_COMMENT_PBNO"/>
+		<result column="PROJECT_COMMENT_COMMENTS" property="PROJECT_COMMENT_COMMENTS"/>
+		<result column="PROJECT_COMMENT_CRE_DATE" property="PROJECT_COMMENT_CRE_DATE"
+			javaType="java.util.Date"/>
+		<result column="PROJECT_COMMENT_MOD_DATE" property="PROJECT_COMMENT_MOD_DATE"
+			javaType="java.util.Date"/>	
+		<result column="member_nick" property="member_nick"/>
+		<result column="profile_table_stored_name" property="profile_table_stored_name"/>
+	</resultMap>
+	
+	<resultMap type="com.project.member.model.MemberDto" 
+		id="memberDtoResultMap">
+		<result column="member_no" property="member_no"/>
+		<result column="member_nick" property="member_nick"/>
+		<result column="member_email" property="member_email"/>
+		<result column="member_comments" property="member_comments"/>
+		<result column="profile_table_stored_name" property="profile_table_stored_name"/>
+		<result column="member_cre_date" property="member_cre_date"/>
+	</resultMap>
+	
+	<select id="projectBoardSelectList" parameterType="map"
+		resultMap="projectBoardResultMap">
+		select project_board_mno, (select count(project_comment_no) from project_comment where project_comment.project_comment_pbno = project_board_no) project_comment_cnt, project_board_no, project_board_title, project_board_views, project_board_category, project_board_cre_date, project_board_like, file_table_stored_file_name, member_nick, profile_table_stored_name
+		from member m left join profile_table pt
+		on m.member_no = pt.profile_table_mno
+		join (select FB.rnum, fb.cnt, fb.project_board_no, fb.project_board_contents, fb.project_board_title, fb.project_board_views, fb.project_board_category, fb.project_board_cre_date, fb.project_board_like, fb.file_table_stored_file_name, fb.project_board_mno
+		      from (select rownum rnum, f.cnt, f.project_board_no, f.project_board_contents, f.project_board_title, f.project_board_views, f.project_board_category, f.project_board_cre_date, f.project_board_like, f.file_table_stored_file_name,f.project_board_mno
+		            from (select pb.cnt, pb.project_board_mno, pb.project_board_contents, pb.project_board_del_flag ,pb.project_board_no, pb.project_board_title, pb.project_board_views, pb.project_board_category, pb.project_board_cre_date, pb.project_board_like, ft.file_table_stored_file_name
+		                  ,DENSE_RANK() OVER (PARTITION BY pb.project_board_no
+		                  ORDER BY ft.file_table_no) r
+		                  from (select (select count(project_board_no) from project_board) cnt, p.project_board_mno, p.project_board_contents, p.project_board_del_flag, p.project_board_no, p.project_board_title, p.project_board_views, p.project_board_category, p.project_board_cre_date, count(project_like_no) project_board_like
+		                        from project_board p left join project_like pl
+		                        on p.project_board_no = pl.project_like_pbno
+		                        and pl.project_like_flag = 'Y'
+		                        and p.project_board_mno = pl.project_like_mno
+		                        group by p.project_board_mno, p.project_board_contents, p.project_board_del_flag, p.project_board_no, p.project_board_title, p.project_board_views, p.project_board_category, p.project_board_cre_date order by ${sortOption} desc) pb, file_table ft
+		                  where pb.project_board_no = ft.file_table_pbno(+) 
+		                  <include refid="pageOption"></include>
+		                  order by ${sortOption} desc) f
+		                  where f.r = 1  
+		                  and project_board_del_flag = 'N'
+		                  <include refid="categoryOption"></include>		                           
+		                   ) FB 
+		                   ) PBM
+		on m.member_no = PBM.project_board_mno
+		<include refid="pageOption2"></include>
+		<include refid="searchOption"></include>
+		order by ${sortOption} desc
+	</select>
+	
+	<select id="projectBoardTotalCount" parameterType="map" 
+		resultType="int">
+		SELECT count(*)
+		from project_board pb left join member m
+		on pb.project_board_mno = m.member_no
+		where pb.project_board_del_flag = 'N'
+		<include refid="searchOption"></include>		
+		<include refid="categoryOption"></include>
+		<include refid="pageOption"></include>
+	</select>
+	
+	<select id="projectBoardSelectOne" parameterType="int"
+		resultMap="projectBoardResultMap">
+		select project_board_mno, (select count(project_comment_no) from project_comment where project_comment_pbno = #{no}) project_comment_cnt, member_nick, profile_table_stored_name, project_board_title, project_board_contents, project_board_category, project_board_like, project_board_views, project_board_cre_date
+		from project_board pb, member m, profile_table pt,
+		     (select count(project_like_no) project_board_like, pb.project_board_no
+		     from project_board pb left join project_like pl
+		     on pb.project_board_no = pl.project_like_pbno
+		     and pl.project_like_flag = 'Y'
+		     where pb.project_board_no = #{no}
+		     group by pb.project_board_no) L
+		where pb.project_board_mno = m.member_no
+		and m.member_no = pt.profile_table_mno(+)
+		and L.project_board_no = pb.project_board_no
+	</select>
+	
+	<select id="projectCommentSelectList" parameterType="int"
+		resultMap="projectCommentResultMap">
+		select project_comment_no, project_comment_mno, project_comment_comments, PROJECT_COMMENT_CRE_DATE, PROJECT_COMMENT_MOD_DATE, member_nick, profile_table_stored_name
+		from member m, profile_table pt, project_comment pc
+		where m.member_no = pt.profile_table_mno(+)
+		and m.member_no = pc.project_comment_mno
+		and project_comment_pbno = #{no}
+		order by project_comment_cre_date desc
+	</select>
+	
+	<select id="projectBoardFileSelectList" parameterType="int"
+		resultMap="projectBoardFileResultMap">
+		select *
+		from file_table
+		where file_table_pbno = #{no}
+		order by file_table_no
+	</select>
+	
+	<insert id="projectBoardInsertOne" parameterType="com.project.projectBoard.model.ProjectBoardDto"
+		useGeneratedKeys="true" keyProperty="project_board_no">
+		<selectKey keyProperty="project_board_no" resultType="int" order="BEFORE">
+			SELECT project_board_pbno_SEQ.NEXTVAL FROM DUAL
+		</selectKey>
+		
+		INSERT INTO PROJECT_BOARD
+		VALUE(PROJECT_BOARD_NO, PROJECT_BOARD_MNO
+			, PROJECT_BOARD_TITLE, PROJECT_BOARD_CRE_DATE
+			, PROJECT_BOARD_CATEGORY, PROJECT_BOARD_CONTENTS)
+		VALUES(#{project_board_no}, #{project_board_mno}
+			, #{project_board_title}, SYSDATE
+			, #{project_board_category}, #{project_board_contents})
+	</insert>
+	
+	<insert id="insertFile" parameterType="map">
+		insert into file_table
+		value(FILE_TABLE_NO,FILE_TABLE_MNO,FILE_TABLE_PBNO,FILE_TABLE_ORIGINAL_FILE_NAME,FILE_TABLE_STORED_FILE_NAME, FILE_TABLE_CRE_DATE)
+		values(file_table_ftno_SEQ.nextval, #{writer_no}, #{parent_seq}, #{original_file_name}, #{stored_file_name}, SYSDATE)
+	</insert>
+	
+	<update id="projectBoardUpdateOne" parameterType="com.project.projectBoard.model.ProjectBoardDto">
+		UPDATE PROJECT_BOARD
+		SET PROJECT_BOARD_TITLE = #{project_board_title}
+		, PROJECT_BOARD_CONTENTS = #{project_board_contents}
+		, PROJECT_BOARD_CATEGORY = #{project_board_category}
+		WHERE PROJECT_BOARD_NO = #{project_board_no}
+	</update>
+	
+	<delete id="deleteFile" parameterType="int">
+		delete from file_table
+		where file_table_pbno = #{project_board_no}
+	</delete>
+	
+	<select id="fileSelectStoredFileName" parameterType="int"
+		resultType="map">
+		SELECT FILE_TABLE_NO, FILE_TABLE_STORED_FILE_NAME
+		FROM FILE_TABLE
+		WHERE FILE_TABLE_PBNO = #{project_board_no}
+	</select>
+	
+	<update id="projectBoardDeleteOne" parameterType="int">
+		update project_board
+		set project_board_del_flag = 'Y'
+		where project_board_no = #{no}
+	</update>
+	
+	<insert id="projectCommentInsertOne" parameterType="com.project.projectBoard.model.ProjectCommentDto">
+		insert into project_comment
+		value(project_comment_no, project_comment_mno, project_comment_pbno, project_comment_comments, project_comment_cre_date)
+		values(project_comment_pcno_SEQ.nextval, #{PROJECT_COMMENT_MNO}, #{PROJECT_COMMENT_PBNO}, #{PROJECT_COMMENT_COMMENTS}, SYSDATE)
+	</insert>
+	
+	<update id="projectCommentUpdateOne" parameterType="com.project.projectBoard.model.ProjectCommentDto">
+		update project_comment
+		set project_comment_comments = #{PROJECT_COMMENT_COMMENTS}
+		, project_comment_mod_date = SYSDATE
+		where project_comment_no = #{PROJECT_COMMENT_NO}
+	</update>
+	
+	<delete id="projectCommentDeleteOne" parameterType="int">
+		delete from project_comment
+		where project_comment_no = #{no}
+	</delete>
+	
+	<delete id="projectCommentDelete">
+		delete from project_comment
+		where project_comment_pbno = #{no}
+	</delete>
+	
+	<delete id="deleteFileName" parameterType="String">
+		delete from file_table
+		where file_table_stored_file_name = #{str}
+	</delete>
+	
+	<select id="profileSelectOne" parameterType="int"
+		resultMap="memberDtoResultMap">
+		select member_no, member_nick, member_email, member_comments, member_cre_date, profile_table_stored_name
+		from member m, profile_table pt
+		where m.member_no = pt.profile_table_mno(+)
+		and member_no = #{no}
+	</select>
+	
+	<update id="projectView" parameterType="int">
+		update project_board
+		set project_board_views =  project_board_views +1
+		where project_board_no = #{no}
+	</update>
+	
+	<insert id="projectLike" parameterType="map">
+		insert into project_like
+		value(project_like_no, project_like_mno, project_like_pbno, project_like_flag)
+		values(project_like_plno_seq.nextval, #{mno}, #{no}, 'Y')
+	</insert>
+	
+	<update id="projectLikeUpdate" parameterType="map">
+		update project_like
+		set project_like_flag ='Y'
+		where project_like_mno = #{mno}
+		and project_like_pbno= #{no}
+	</update>
+	
+	<update id="projectLikeDelete" parameterType="map">
+		update project_like
+		set project_like_flag ='N'
+		where project_like_mno = #{mno}
+		and project_like_pbno= #{no}
+	</update>
+	
+	<select id="projectLikeFlag" parameterType="map"
+		resultType="map">
+		select project_like_no, project_like_flag
+		from project_like
+		where project_like_mno = #{mno}
+		and project_like_pbno = #{no}
+	</select>
+	
+	<select id="selectInfoList" resultType="map">
+		select 
+		(select count(*) from project_board where project_board_del_flag = 'N') pbList 
+		, (select count(*) from free_board) fbList 
+		, (select count(*) from member where member_del_flag = 'N') mList
+		, (select count(*) from qna_board where QNA_BOARD_ANSWER_STATUS = '접수중') qbList
+		, (select count(*) from report_board where REPORT_BOARD_ANSWER_STATUS  = '접수중') rbList
+		from dual
+	</select>
+	
+</mapper>

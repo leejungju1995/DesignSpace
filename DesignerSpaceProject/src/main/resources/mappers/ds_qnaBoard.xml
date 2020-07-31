@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.project.qnaBoard">
+
+	<sql id="search">
+		<choose>
+        	<when test="searchOption == 'titleAndContent'">
+        		WHERE (QNA_BOARD_TITLE LIKE '%' || #{keyword} || '%'
+        		OR    QNA_BOARD_CONTENTS LIKE '%' || #{keyword} || '%')
+        	</when>
+        	
+        	<otherwise>
+        		WHERE (${searchOption} LIKE '%' || #{keyword} || '%')
+        	</otherwise>
+        </choose>
+	</sql>
+	
+	<sql id="sort">
+		<choose>
+        	<when test="sortOption == 'qna_board_whole'">
+        		AND (QNA_BOARD_ANSWER_STATUS LIKE '%')
+        	</when>
+        	<when test="sortOption == 'qna_board_accept'">
+        		AND (QNA_BOARD_ANSWER_STATUS LIKE '%' || '접수중' || '%')
+        	</when>
+        	<when test="sortOption == 'qna_board_answer'">
+        		AND (QNA_BOARD_ANSWER_STATUS LIKE '%' || '답변중' || '%')
+        	</when>
+        	<when test="sortOption == 'qna_board_time_limit'">
+        		AND (QNA_BOARD_ANSWER_STATUS LIKE '%' || '기한만료' || '%')
+        	</when>
+        	<when test="sortOption == 'qna_board_answer_complete'">
+        		AND (QNA_BOARD_ANSWER_STATUS LIKE '%' || '답변완료' || '%')
+        	</when>
+        </choose>
+	</sql>
+	
+	<sql id="chkMno">
+      <choose>
+         <when test="mno > 0">
+            and qna_board_mno = #{mno}
+         </when>
+      </choose>
+   </sql>
+
+	<resultMap type="com.project.qnaBoard.model.QnaBoardDto" 
+		id="qnaBoardResultMap">
+		
+		<id column="QNA_BOARD_NO" property="qna_board_no"/>
+		<result column="QNA_BOARD_MNO" property="qna_board_mno"/>
+		<result column="QNA_BOARD_TITLE" property="qna_board_title"/>
+		<result column="QNA_BOARD_CONTENTS" property="qna_board_contents"/>
+		<result column="QNA_BOARD_CRE_DATE" property="qna_board_cre_date"
+			javaType="java.util.Date"/>
+		<result column="QNA_BOARD_MOD_DATE" property="qna_board_mod_date"
+			javaType="java.util.Date"/>
+		<result column="QNA_BOARD_ANSWER_DATE" property="qna_board_answer_date"
+			javaType="java.util.Date"/>
+		<result column="QNA_BOARD_ANSWER_STATUS" property="qna_board_answer_status"/>
+		
+		<result column="QNA_COMMENT_NO" property="qna_comment_no"/>
+		<result column="QNA_COMMENT_QBNO" property="qna_comment_qbno"/>
+		<result column="QNA_COMMENT_MNO" property="qna_comment_mno"/>
+		<result column="QNA_COMMENT_COMMENTS" property="qna_comment_comments"/>
+		<result column="QNA_COMMENT_CRE_DATE" property="qna_comment_cre_date"
+			javaType="java.util.Date"/>
+		<result column="QNA_COMMENT_MOD_DATE" property="qna_comment_mod_date"
+			javaType="java.util.Date"/>
+		
+		<result column="MEMBER_NO" property="member_no"/>
+		<result column="MEMBER_NAME" property="member_name"/>
+		<result column="MEMBER_NICK" property="member_nick"/>
+		<result column="MEMBER_EMAIL" property="member_email"/>
+		<result column="MEMBER_PWD" property="member_pwd"/>
+		<result column="MEMBER_PHONE" property="member_phone"/>
+		<result column="MEMBER_CHECK_QUESTION" property="member_check_question"/>
+		<result column="MEMBER_CHECK_ANSWER" property="member_check_answer"/>
+		<result column="MEMBER_COMMENTS" property="member_comments"/>
+		<result column="MEMBER_CRE_DATE" property="member_cre_date"/>
+		<result column="MEMBER_MOD_DATE" property="member_mod_date"/>
+		<result column="MEMBER_SIGN_CHECK" property="member_sign_check"/>
+		<result column="MEMBER_GRADE" property="member_grade"/>
+		<result column="MEMBER_DEL_FLAG" property="member_del_flag"/>
+		
+		<result column="PROFILE_TABLE_NO" property="profile_table_no"/>
+		<result column="PROFILE_TABLE_MNO" property="profile_table_mno"/>
+		<result column="PROFILE_TABLE_ORIGINAL_NAME" property="profile_table_original_name"/>
+		<result column="PROFILE_TABLE_STORED_NAME" property="profile_table_stored_name"/>
+		
+	</resultMap>
+
+	<select id="qnaBoardSelectList" parameterType="map" 
+		resultMap="qnaBoardResultMap">
+		SELECT QNAM.RNUM, QNAM.QNA_BOARD_NO, QNAM.QNA_BOARD_TITLE, QNAM.MEMBER_NICK,
+       		   QNAM.QNA_BOARD_CRE_DATE, QNAM.QNA_BOARD_ANSWER_DATE, QNAM.QNA_BOARD_ANSWER_STATUS
+		FROM(SELECT ROWNUM RNUM, QNA.QNA_BOARD_NO, QNA.QNA_BOARD_TITLE, QNA.MEMBER_NICK,
+                    QNA.QNA_BOARD_CRE_DATE, QNA.QNA_BOARD_ANSWER_DATE, QNA.QNA_BOARD_ANSWER_STATUS 
+     		 FROM(SELECT QB.QNA_BOARD_NO, QB.QNA_BOARD_TITLE, M.MEMBER_NICK, QB.QNA_BOARD_CRE_DATE,
+			   			 QB.QNA_BOARD_ANSWER_DATE, QB.QNA_BOARD_ANSWER_STATUS 
+          		  FROM QNA_BOARD QB LEFT OUTER JOIN MEMBER M
+          		  ON QB.QNA_BOARD_MNO = M.MEMBER_NO
+          		  
+          		  <include refid="search"></include>
+          		  <include refid="sort"></include>
+          		  <include refid="chkMno"></include>
+          		  
+          		  ORDER BY QB.QNA_BOARD_NO DESC) QNA 
+     		 )QNAM     
+		WHERE QNAM.RNUM BETWEEN #{start} AND #{end}
+	</select>
+	
+	<select id="qnaBoardSelectDetail" parameterType="int"
+		resultMap="qnaBoardResultMap">
+		SELECT QB.QNA_BOARD_NO, QB.QNA_BOARD_MNO, M.MEMBER_NICK, QB.QNA_BOARD_TITLE, QB.QNA_BOARD_CONTENTS, 
+			   QB.QNA_BOARD_CRE_DATE, QB.QNA_BOARD_ANSWER_DATE, QB.QNA_BOARD_ANSWER_STATUS  
+		FROM QNA_BOARD QB, MEMBER M
+		WHERE QB.QNA_BOARD_MNO = M.MEMBER_NO
+		AND QB.QNA_BOARD_NO = #{qna_board_no}	
+	</select>
+	
+	<insert id="qnaBoardInsertOne" parameterType="com.project.qnaBoard.model.QnaBoardDto">
+		INSERT INTO QNA_BOARD
+		VALUE(QNA_BOARD_NO,QNA_BOARD_MNO,QNA_BOARD_TITLE,QNA_BOARD_CONTENTS,QNA_BOARD_CRE_DATE)
+		VALUES(QNA_BOARD_QBNO_SEQ.NEXTVAL, #{qna_board_mno}, #{qna_board_title}, #{qna_board_contents}, SYSDATE)
+	</insert>
+	
+	<update id="qnaBoardUpdateOne" parameterType="com.project.qnaBoard.model.QnaBoardDto">
+		UPDATE QNA_BOARD
+		SET QNA_BOARD_TITLE = #{qna_board_title},
+    		QNA_BOARD_CONTENTS = #{qna_board_contents},
+    		QNA_BOARD_MOD_DATE = SYSDATE
+		WHERE QNA_BOARD_NO = #{qna_board_no}
+	</update>
+	
+	<delete id="qnaBoardDeleteOne" parameterType="java.lang.Integer" >
+		DELETE FROM QNA_BOARD
+		WHERE QNA_BOARD_NO = #{qna_board_no}
+	</delete>
+	
+	<!-- 주석 처리 -->
+	<select id="qnaBoardSelectTotalCount" resultType="int" 
+		parameterType="map">
+		SELECT COUNT(*)
+		FROM QNA_BOARD QB LEFT OUTER JOIN MEMBER M
+		ON QB.QNA_BOARD_MNO = M.MEMBER_NO
+		<include refid="search"></include>
+		<include refid="sort"></include>
+		<include refid="chkMno"></include>		
+	</select>
+	
+	<select id="qnaSelectCurPage" parameterType="map"
+		resultType="int">
+		SELECT FLOOR((RNUM-1) / 10) + 1 NO
+		FROM(SELECT ROWNUM RNUM, QNA.QNA_BOARD_NO, QNA.QNA_BOARD_TITLE, QNA.MEMBER_NICK,
+                    QNA.QNA_BOARD_CRE_DATE, QNA.QNA_BOARD_ANSWER_DATE, QNA.QNA_BOARD_ANSWER_STATUS 
+     		 FROM(SELECT QB.QNA_BOARD_NO, QB.QNA_BOARD_TITLE, M.MEMBER_NICK, QB.QNA_BOARD_CRE_DATE,
+			   			 QB.QNA_BOARD_ANSWER_DATE, QB.QNA_BOARD_ANSWER_STATUS 
+          		  FROM QNA_BOARD QB LEFT OUTER JOIN MEMBER M
+          		  ON QB.QNA_BOARD_MNO = M.MEMBER_NO
+          		  
+          		  <include refid="search"></include>
+          		  
+          		  ORDER BY QB.QNA_BOARD_NO DESC) QNA 
+     		 )    
+		WHERE QNA_BOARD_NO = #{qna_board_no}
+		<include refid="sort"></include>
+	</select>
+	
+	<select id="qnaBoardCommentSelectList" parameterType="map" 
+		resultMap="qnaBoardResultMap">
+		SELECT *
+		FROM(SELECT ROWNUM RNUM, QNA.QNA_COMMENT_NO,QNA.QNA_COMMENT_COMMENTS,QNA.QNA_COMMENT_CRE_DATE
+                , QNA.MEMBER_NICK, QNA.PROFILE_TABLE_STORED_NAME, QNA.QNA_COMMENT_MNO
+				, QNA.PROFILE_TABLE_ORIGINAL_NAME, QNA.PROFILE_TABLE_MNO, QNA.PROFILE_TABLE_NO 
+     		 FROM(SELECT QC.QNA_COMMENT_NO, QC.QNA_COMMENT_COMMENTS, QC.QNA_COMMENT_CRE_DATE
+                         , M.MEMBER_NICK, PT.PROFILE_TABLE_STORED_NAME, PT.PROFILE_TABLE_ORIGINAL_NAME, QC.QNA_COMMENT_MNO
+                         , PT.PROFILE_TABLE_MNO, PT.PROFILE_TABLE_NO
+          		  FROM QNA_BOARD QB, QNA_COMMENT QC, MEMBER M, PROFILE_TABLE PT
+          		  WHERE QB.QNA_BOARD_NO = QC.QNA_COMMENT_QBNO
+                  AND QC.QNA_COMMENT_MNO = M.MEMBER_NO(+)
+                  AND M.MEMBER_NO = PT.PROFILE_TABLE_MNO(+)
+                  AND QB.QNA_BOARD_NO = #{qna_board_no}
+          		  ORDER BY QC.QNA_COMMENT_NO DESC) QNA 
+     		 )QNAM     
+		<![CDATA[WHERE RNUM <= #{end}]]>
+	</select>
+	
+	<select id="qnaBoardCommentSelectTotalCount" resultType="int" 
+		parameterType="int">
+		SELECT COUNT(*)
+		FROM (SELECT ROWNUM RNUM, QNA.QNA_COMMENT_NO, QNA.QNA_COMMENT_COMMENTS
+					 , QNA.QNA_COMMENT_CRE_DATE, QNA.MEMBER_NICK, QNA.PROFILE_TABLE_STORED_NAME
+		      FROM ( SELECT QC.QNA_COMMENT_NO, QC.QNA_COMMENT_COMMENTS, QC.QNA_COMMENT_CRE_DATE
+                         , M.MEMBER_NICK, PT.PROFILE_TABLE_STORED_NAME
+          		  	 FROM QNA_BOARD QB, QNA_COMMENT QC, MEMBER M, PROFILE_TABLE PT
+          		 	 WHERE QB.QNA_BOARD_NO = QC.QNA_COMMENT_QBNO
+                  	 AND QC.QNA_COMMENT_MNO = M.MEMBER_NO
+                  	 AND M.MEMBER_NO = PT.PROFILE_TABLE_MNO
+                  	 AND QB.QNA_BOARD_NO = #{qna_board_no}
+          		  	 ORDER BY QC.QNA_COMMENT_NO DESC) QNA
+		        )
+	</select>
+	
+	<insert id="qnaBoardCommentInsertOne" parameterType="map">
+		INSERT INTO QNA_COMMENT
+		VALUE(QNA_COMMENT_NO, QNA_COMMENT_QBNO, QNA_COMMENT_MNO, QNA_COMMENT_COMMENTS, QNA_COMMENT_CRE_DATE)
+		VALUES(QNA_COMMENT_QCNO_SEQ.NEXTVAL, #{qna_comment_qbno}, 
+			   #{qna_comment_mno}, #{qna_comment_comments}, SYSDATE)
+	</insert>
+	
+	<delete id="qnaCommentDeleteOne" parameterType="java.lang.Integer">
+		DELETE FROM QNA_COMMENT
+		WHERE QNA_COMMENT_NO = #{qna_comment_no}
+	</delete>
+	
+	<update id="qnaCommentUpdateOne" parameterType="map">
+		UPDATE QNA_COMMENT
+    	SET	QNA_COMMENT_COMMENTS = #{qna_comment_comments},
+    		QNA_COMMENT_MOD_DATE = SYSDATE
+		WHERE QNA_COMMENT_NO = #{qna_comment_no}
+	</update>
+	
+	<delete id="qnaCommentDelete" parameterType="int">
+		DELETE FROM QNA_COMMENT
+		WHERE QNA_COMMENT_QBNO = #{qna_board_no}
+	</delete>
+	
+	<update id="changeUpdateStatus" parameterType="int">
+		UPDATE QNA_BOARD
+		SET
+		QNA_BOARD_ANSWER_STATUS = '답변중',
+   		QNA_BOARD_ANSWER_DATE = SYSDATE
+		WHERE QNA_BOARD_NO = #{qna_board_no}
+	</update>
+	
+	<update id="answerCompleteChange" parameterType="int">
+		UPDATE QNA_BOARD
+		SET
+		QNA_BOARD_ANSWER_STATUS = '답변완료',
+   		QNA_BOARD_ANSWER_DATE = SYSDATE
+		WHERE QNA_BOARD_NO = #{qna_board_no}
+	</update>
+	
+</mapper>
