@@ -58,7 +58,7 @@ public class FreeBoardController {
 				, start, end, lineTitle);
 		
 		
-		HashMap<String, Object> searchMap 
+		Map<String, Object> searchMap 
 			= new HashMap<String, Object>();
 		searchMap.put("searchOption", searchOption);
 		searchMap.put("keyword", keyword);

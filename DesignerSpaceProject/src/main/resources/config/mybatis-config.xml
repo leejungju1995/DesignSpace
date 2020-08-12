@@ -11,5 +11,9 @@
 <!--  <typeAliases> -->
 <!--  	<typeAlias type="com.project.member.model.MemberDto" alias="memberDto"/> -->
 <!--  </typeAliases> -->
+
+ <typeAliases>
+ 	<typeAlias type="com.project.freeBoard.model.FreeBoardDto" alias="freeBoardDto"/>
+ </typeAliases>
   
 </configuration>

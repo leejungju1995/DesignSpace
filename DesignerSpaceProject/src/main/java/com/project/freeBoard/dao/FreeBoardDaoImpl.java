@@ -25,7 +25,7 @@ public class FreeBoardDaoImpl implements FreeBoardDao{
 	@Override
 	public int freeBoardSelectTotalCount(String searchOption, String keyword, String lineTitle) {
 		// TODO Auto-generated method stub
-		HashMap<String, Object> paramMap = new HashMap<String, Object>();
+		Map<String, Object> paramMap = new HashMap<String, Object>();
 		
 		paramMap.put("searchOption", searchOption);
 		paramMap.put("keyword", keyword);
@@ -281,7 +281,7 @@ public class FreeBoardDaoImpl implements FreeBoardDao{
 	@Override
 	public int reportBoardSelectTotalCount(String searchOption, String keyword,String sortOption,int mno) {
 		// TODO Auto-generated method stub
-		HashMap<String, Object> paramMap = new HashMap<String, Object>();
+		Map<String, Object> paramMap = new HashMap<String, Object>();
 		
 		paramMap.put("searchOption", searchOption);
 		paramMap.put("keyword", keyword);
@@ -294,7 +294,7 @@ public class FreeBoardDaoImpl implements FreeBoardDao{
 	@Override
 	public int qnaBoardSelectTotalCount(String searchOption, String keyword, String sortOption, int mno) {
 		// TODO Auto-generated method stub
-		HashMap<String, Object> paramMap = new HashMap<String, Object>();
+		Map<String, Object> paramMap = new HashMap<String, Object>();
 		
 		paramMap.put("searchOption", searchOption);
 		paramMap.put("keyword", keyword);
