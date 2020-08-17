@@ -5,7 +5,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>회원 목록</title>
+<title>자유게시판 목록</title>
 	<link rel="stylesheet" type="text/css" href="<%=request.getContextPath()%>/resources/css/reset.css">
 	<link rel="stylesheet" type="text/css" href="<%=request.getContextPath()%>/resources/css/style.css">
 	
